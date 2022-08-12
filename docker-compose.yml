@@ -1,0 +1,48 @@
+version: '3'
+
+services:
+###> doctrine/doctrine-bundle ###
+  database:
+    image: postgres:${POSTGRES_VERSION:-13}-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+      # You should definitely change the password in production
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ChangeMe}
+      POSTGRES_USER: ${POSTGRES_USER:-symfony}
+    volumes:
+      - db-data:/var/lib/postgresql/data:rw
+    ports:
+      - "5432:5432"
+      # You may use a bind-mounted host directory instead, so that it is harder to accidentally remove the volume and lose all your data!
+      # - ./docker/db/data:/var/lib/postgresql/data:rw
+  web:
+    image: nginx:latest
+    links:
+      - php
+    ports:
+      - "80:80"
+    environment:
+      VIRTUAL_PORT: 80
+      DOCUMENT_ROOT: /app/public/
+      HTTPS_METHOD: noredirect
+    volumes:
+      - ./docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./app:/app
+  php:
+    build: docker/php
+    links:
+      - database
+    volumes:
+      - ./app:/app
+      - ./docker/php/custom.php.ini:/usr/local/etc/php/conf.d/custom.php.ini
+    environment:
+      XDEBUG_ENABLED: 1
+      XDEBUG_REMOTE_AUTOSTART: 1
+      XDEBUG_MAXNESTING_LEVEL: 1000
+      XDEBUG_REMOTE_CONNECT_BACK: 1
+      XDEBUG_REMOTE_HOST: 172.26.83.49
+      PHP_IDE_CONFIG: serverName=localhost
+      APP_ENV: dev
+
+volumes:
+  db-data:
